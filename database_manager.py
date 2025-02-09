@@ -193,18 +193,14 @@ class DatabaseManager:
                 cursor.execute(f"USE {self.db_config.get('database')};")  # Select the database
                 cursor.close()
 
-            if self.db_type in ['postgresql', 'mysql']:
-                query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
-            elif self.db_type == 'sqlite':
-                query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_definition)})"
-            else:
-                raise ValueError("Unsupported database type for table creation")
-
-            cursor = self.connection.cursor()
-            cursor.execute(query)
-            self.connection.commit()
-            logging.info(f"Table {table_name} created successfully.")
-        except ValueError:
-            logging.warning(f"Unsupported database type '{self.db_type}' for table creation")
+            if self.db_type in ['postgresql', 'sqlite', 'mysql']:
+                if self.db_type == 'sqlite':
+                    query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_definition)})"
+                else:
+                    query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
+                cursor = self.connection.cursor()
+                cursor.execute(query)
+                self.connection.commit()
+                logging.info(f"Table {table_name} created successfully.")
         except Exception as e:
             logging.error(f"Error creating table {table_name}: {e}")
