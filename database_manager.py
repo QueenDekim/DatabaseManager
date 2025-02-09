@@ -40,7 +40,7 @@ class DatabaseManager:
                 raise ValueError("Unsupported database type")
 
         except ValueError:
-            logging.warning(f"Unsupported database type '{self.db_type}' for database creation")
+            logging.warning(f"Unsupported database type '{self.db_type}'")
         except Exception as e:
             logging.error(f"Error connecting to the database: {e}")
 
@@ -128,7 +128,7 @@ class DatabaseManager:
             else:
                 raise ValueError("Unsupported database type for database existence check")
         except ValueError:
-            logging.warning(f"Unsupported database type '{self.db_type}' for database creation")
+            logging.warning(f"Unsupported database type '{self.db_type}' for database existence check")
         except Exception as e:
             logging.error(f"Error checking database existence: {e}")
             return False
@@ -178,7 +178,7 @@ class DatabaseManager:
             cursor.close()
             return result
         except ValueError:
-            logging.warning(f"Unsupported database type '{self.db_type}' for database creation")
+            logging.warning(f"Unsupported database type '{self.db_type}' for table existence check")
         except Exception as e:
             logging.error(f"Error checking table existence: {e}")
             return False
@@ -205,6 +205,6 @@ class DatabaseManager:
             self.connection.commit()
             logging.info(f"Table {table_name} created successfully.")
         except ValueError:
-            logging.warning(f"Unsupported database type '{self.db_type}' for database creation")
+            logging.warning(f"Unsupported database type '{self.db_type}' for table creation")
         except Exception as e:
             logging.error(f"Error creating table {table_name}: {e}")
