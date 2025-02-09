@@ -50,6 +50,10 @@ class DatabaseManager:
                 return self._execute_redis(method, table, data)
             cursor = self.connection.cursor()
             query = ""
+            if self.db_type == 'mysql':
+                if self.db_config.get('database'):
+                    cursor.execute(f"USE {self.db_config.get('database')};")
+
             if method.lower() == 'select':
                 query = f"SELECT {', '.join(columns)} FROM {table}"
                 if where:
