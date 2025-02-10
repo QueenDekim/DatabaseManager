@@ -50,9 +50,41 @@ class DatabaseManager:
                 return self._execute_redis(method, table, data)
             cursor = self.connection.cursor()
             query = ""
+
             if self.db_type == 'mysql':
                 if self.db_config.get('database'):
                     cursor.execute(f"USE {self.db_config.get('database')};")
+
+            if self.db_type == 'sqlite':
+                cursor = self.connection.cursor()
+                query = ""
+                if method.lower() == 'select':
+                    query = f"SELECT {', '.join(columns)} FROM {table}"
+                    if where:
+                        query += f" WHERE {where}"
+                    cursor.execute(query)
+                    result = cursor.fetchall()
+                    return result
+                elif method.lower() == 'insert':
+                    placeholders = ', '.join(['?'] * len(data))
+                    query = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(data))
+                elif method.lower() == 'update':
+                    set_clause = ', '.join([f"{col} = ?" for col in columns])
+                    query = f"UPDATE {table} SET {set_clause}"
+                    if where:
+                        query += f" WHERE {where}"
+                    cursor.execute(query, tuple(data))
+                elif method.lower() == 'delete':
+                    query = f"DELETE FROM {table}"
+                    if where:
+                        query += f" WHERE {where}"
+                    cursor.execute(query)
+                else:
+                    raise ValueError("Unsupported method")
+                self.connection.commit()
+                cursor.close()
+                return True
 
             if method.lower() == 'select':
                 query = f"SELECT {', '.join(columns)} FROM {table}"
@@ -119,14 +151,8 @@ class DatabaseManager:
                 return result
             elif self.db_type == 'postgresql':
                 cursor = self.connection.cursor()
-                cursor.execute("""
-                    SELECT EXISTS (
-                        SELECT 1
-                        FROM pg_database
-                        WHERE datname = %s
-                    );
-                """, (database_name,))
-                result = cursor.fetchone()[0]
+                cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (database_name,))
+                result = cursor.fetchone() is not None
                 cursor.close()
                 return result
             else:
@@ -140,10 +166,19 @@ class DatabaseManager:
     # Method to create a database
     def create_database(self, database_name):
         try:
-            if self.db_type in ['mysql', 'postgresql']:
+            if self.db_type == 'mysql':
                 cursor = self.connection.cursor()
                 cursor.execute(f"CREATE DATABASE {database_name};")
                 logging.info(f"Database {database_name} created successfully.")
+            elif self.db_type == 'postgresql':
+                cursor = self.connection.cursor()
+                cursor.execute(f"CREATE DATABASE {database_name};")
+                self.connection.commit()
+                logging.info(f"Database {database_name} created successfully.")
+                # необходимо переключиться на созданную базу данных
+                self.db_config['database'] = database_name
+                self.connection.close()
+                self.connection = self._connect()
             else:
                 raise ValueError("Unsupported database type for database creation")
         except ValueError:
@@ -156,11 +191,12 @@ class DatabaseManager:
         try:
             cursor = self.connection.cursor()
             if self.db_type == 'postgresql':
+                cursor = self.connection.cursor()
                 cursor.execute("""
                     SELECT EXISTS (
                         SELECT 1
                         FROM information_schema.tables
-                        WHERE table_name = %s
+                        WHERE table_name = %s AND table_schema = 'public'
                     );
                 """, (table_name,))
                 result = cursor.fetchone()[0]
@@ -196,8 +232,13 @@ class DatabaseManager:
                 cursor = self.connection.cursor()
                 cursor.execute(f"USE {self.db_config.get('database')};")  # Select the database
                 cursor.close()
-
-            if self.db_type in ['postgresql', 'sqlite', 'mysql']:
+            if self.db_type == 'postgresql':
+                cursor = self.connection.cursor()
+                query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
+                cursor.execute(query)
+                self.connection.commit()
+                logging.info(f"Table {table_name} created successfully.")
+            if self.db_type in ['sqlite', 'mysql']:
                 if self.db_type == 'sqlite':
                     query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_definition)})"
                 else:
@@ -205,6 +246,8 @@ class DatabaseManager:
                 cursor = self.connection.cursor()
                 cursor.execute(query)
                 self.connection.commit()
+                logging.info(f"Table {table_name} created successfully.")
+            elif self.db_type == 'redis':
                 logging.info(f"Table {table_name} created successfully.")
         except Exception as e:
             logging.error(f"Error creating table {table_name}: {e}")
