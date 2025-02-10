@@ -35,20 +35,24 @@ def _connect(self):
         if self.db_type == 'sqlite':
             return sqlite3.connect(self.db_config['db_name'])
         elif self.db_type == 'postgresql':
+            # Enable autocommit mode for PostgreSQL connections
             conn = psycopg2.connect(**self.db_config)
-            conn.autocommit = True
+            conn.autocommit = True  # Ensure autocommit is always enabled for PostgreSQL
             return conn
         elif self.db_type == 'mysql':
             return pymysql.connect(
                 user=self.db_config.get('user'),
                 password=self.db_config.get('password'),
                 host=self.db_config.get('host'),
-                database=self.db_config.get('database')
+                database=self.db_config.get('database')  # Use the specified database
             )
         elif self.db_type == 'redis':
             return redis.Redis(**self.db_config)
         else:
             raise ValueError("Unsupported database type")
+
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}'")
     except Exception as e:
         logging.error(f"Error connecting to the database: {e}")
 ```
@@ -65,6 +69,42 @@ def execute(self, method, table, columns='*', data=None, where=None):
             return self._execute_redis(method, table, data)
         cursor = self.connection.cursor()
         query = ""
+
+        if self.db_type == 'mysql':
+            if self.db_config.get('database'):
+                cursor.execute(f"USE {self.db_config.get('database')};")
+
+        if self.db_type == 'sqlite':
+            cursor = self.connection.cursor()
+            query = ""
+            if method.lower() == 'select':
+                query = f"SELECT {', '.join(columns)} FROM {table}"
+                if where:
+                    query += f" WHERE {where}"
+                cursor.execute(query)
+                result = cursor.fetchall()
+                return result
+            elif method.lower() == 'insert':
+                placeholders = ', '.join(['?'] * len(data))
+                query = f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
+                cursor.execute(query, tuple(data))
+            elif method.lower() == 'update':
+                set_clause = ', '.join([f"{col} = ?" for col in columns])
+                query = f"UPDATE {table} SET {set_clause}"
+                if where:
+                    query += f" WHERE {where}"
+                cursor.execute(query, tuple(data))
+            elif method.lower() == 'delete':
+                query = f"DELETE FROM {table}"
+                if where:
+                    query += f" WHERE {where}"
+                cursor.execute(query)
+            else:
+                raise ValueError("Unsupported method")
+            self.connection.commit()
+            cursor.close()
+            return True
+
         if method.lower() == 'select':
             query = f"SELECT {', '.join(columns)} FROM {table}"
             if where:
