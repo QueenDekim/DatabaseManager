@@ -1,3 +1,55 @@
+# DatabaseManager class
+
+- A class for managing the connection and performing operations with various types of databases (`SQLite`, `PostgreSQL`, `MySQL`, `REDIS`).
+- Supports methods for performing SQL request (`Select`, `Insert`, `Update`, `Delete`) and compound control.
+
+---
+
+# Usage Instructions [EN]
+
+1. Install required libraries:
+   ```bash
+   # Windows
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   pip install -r requirements.txt
+
+   # Linux
+   python3 -m venv .venv
+   . ./.venv/bin/activate # or 'source ./.venv/bin/activate'
+   pip3 install -r requirements.txt
+   ```
+
+2. Import the class in your Python script:
+
+    ```py
+    from database_manager import DatabaseManager
+    ```
+
+---
+
+# Инструкции по использованию [RU]
+
+1. Установите необходимые библиотеки:
+   ```bash
+   # Windows
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   pip install -r requirements.txt
+
+   # Linux
+   python3 -m venv .venv
+   . ./.venv/bin/activate # или 'source ./.venv/bin/activate'
+   pip3 install -r requirements.txt
+   ```
+
+2. Импортируйте класс в свой скрипт Python:
+
+    ```py
+    from database_manager import DatabaseManager
+    ```
+
+
 # Documentation [EN]
 
 ## Class `DatabaseManager`
