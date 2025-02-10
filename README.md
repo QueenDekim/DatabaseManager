@@ -160,6 +160,151 @@ def _execute_redis(self, method, key, data=None):
         return False
 ```
 
+#### 4. `close`
+
+Closes the database connection if it exists.
+
+```py
+def close(self):
+    try:
+        if self.db_type in ['sqlite', 'postgresql', 'mysql'] and self.connection:
+            self.connection.close()
+    except Exception as e:
+        logging.error(f"Error closing database connection: {e}")
+```
+
+#### 5. `database_exists(database_name)`
+
+Checks if a specific database exists.
+
+```py
+def database_exists(self, database_name):
+    try:
+        if self.db_type == 'mysql':
+            cursor = self.connection.cursor()
+            cursor.execute(f"SHOW DATABASES LIKE '{database_name}';")
+            result = cursor.fetchone() is not None
+            cursor.close()
+            return result
+        elif self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (database_name,))
+            result = cursor.fetchone() is not None
+            cursor.close()
+            return result
+        else:
+            raise ValueError("Unsupported database type for database existence check")
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}' for database existence check")
+    except Exception as e:
+        logging.error(f"Error checking database existence: {e}")
+        return False
+```
+
+#### 6. `create_database(database_name)`
+
+Creates a new database.
+
+```py
+def create_database(self, database_name):
+    try:
+        if self.db_type == 'mysql':
+            cursor = self.connection.cursor()
+            cursor.execute(f"CREATE DATABASE {database_name};")
+            logging.info(f"Database {database_name} created successfully.")
+        elif self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            cursor.execute(f"CREATE DATABASE {database_name};")
+            self.connection.commit()
+            logging.info(f"Database {database_name} created successfully.")
+            # необходимо переключиться на созданную базу данных
+            self.db_config['database'] = database_name
+            self.connection.close()
+            self.connection = self._connect()
+        else:
+            raise ValueError("Unsupported database type for database creation")
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}' for database creation")
+    except Exception as e:
+        logging.error(f"Error creating database {database_name}: {e}")
+```
+
+#### 7. `table_exists(table_name)`
+
+Checks if a specific table exists within the current database.
+
+```py
+def table_exists(self, table_name):
+    try:
+        cursor = self.connection.cursor()
+        if self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_name = %s AND table_schema = 'public'
+                );
+            """, (table_name,))
+            result = cursor.fetchone()[0]
+        elif self.db_type == 'mysql':
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_name = %s AND table_schema = DATABASE();
+            """, (table_name,))
+            result = cursor.fetchone()[0] > 0
+        elif self.db_type == 'sqlite':
+            cursor.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name=?;
+            """, (table_name,))
+            result = len(cursor.fetchall()) > 0
+        else:
+            raise ValueError("Unsupported database type for table existence check")
+        cursor.close()
+        return result
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}' for table existence check")
+    except Exception as e:
+        logging.error(f"Error checking table existence: {e}")
+        return False
+```
+
+#### 8. `create_table(table_name, columns_definition)`
+
+Creates a new table with the specified column definitions.
+
+```py
+def create_table(self, table_name, columns_definition):
+    try:
+        if self.db_type == 'mysql':
+            if not self.db_config.get('database'):
+                raise ValueError("Database name is not specified in the configuration.")
+            cursor = self.connection.cursor()
+            cursor.execute(f"USE {self.db_config.get('database')};")  # Select the database
+            cursor.close()
+        if self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
+            cursor.execute(query)
+            self.connection.commit()
+            logging.info(f"Table {table_name} created successfully.")
+        if self.db_type in ['sqlite', 'mysql']:
+            if self.db_type == 'sqlite':
+                query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_definition)})"
+            else:
+                query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
+            cursor = self.connection.cursor()
+            cursor.execute(query)
+            self.connection.commit()
+            logging.info(f"Table {table_name} created successfully.")
+        elif self.db_type == 'redis':
+            logging.info(f"Table {table_name} created successfully.")
+    except Exception as e:
+        logging.error(f"Error creating table {table_name}: {e}")
+```
+
 ---
 
 ### Examples of Using `DatabaseManager`
@@ -243,6 +388,88 @@ print(result)
 db_manager.execute('update', 'user:1', 'Bob')
 # Deleting data
 db_manager.execute('delete', 'user:1')
+```
+
+#### Example of `database_exists`
+
+```python
+from database_manager import DatabaseManager
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+# Check if a database exists
+if db_manager.database_exists('test_db'):
+    print("Database 'test_db' exists.")
+else:
+    print("Database 'test_db' does not exist.")
+```
+
+#### Example of `create_database`
+
+```python
+from database_manager import DatabaseManager
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+db_manager.create_database('test_db')
+print("Database 'test_db' has been created.")
+```
+
+#### Example of `table_exists`
+
+```python
+from database_manager import DatabaseManager
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+# Assuming we are connected to 'test_db'
+if db_manager.table_exists('users'):
+    print("Table 'users' exists.")
+else:
+    print("Table 'users' does not exist.")
+```
+
+#### Example of `create_table`
+
+```python
+from database_manager import DatabaseManager
+
+# Define column definitions
+columns = [
+    "id SERIAL PRIMARY KEY",
+    "name VARCHAR(100) NOT NULL",
+    "age INT"
+]
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+# Create a new table
+db_manager.create_table('users', columns)
+print("Table 'users' has been created.")
 ```
 
 ---
@@ -377,6 +604,148 @@ def _execute_redis(self, method, key, data=None):
         return False
 ```
 
+
+#### 4. `close`
+Закрывает соединение базы данных, если оно существует.
+
+```py
+def close(self):
+    try:
+        if self.db_type in ['sqlite', 'postgresql', 'mysql'] and self.connection:
+            self.connection.close()
+    except Exception as e:
+        logging.error(f"Error closing database connection: {e}")
+```
+
+#### 5. `database_exists(database_name)`
+Проверяет, существует ли конкретная база данных.
+
+```py
+def database_exists(self, database_name):
+    try:
+        if self.db_type == 'mysql':
+            cursor = self.connection.cursor()
+            cursor.execute(f"SHOW DATABASES LIKE '{database_name}';")
+            result = cursor.fetchone() is not None
+            cursor.close()
+            return result
+        elif self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (database_name,))
+            result = cursor.fetchone() is not None
+            cursor.close()
+            return result
+        else:
+            raise ValueError("Unsupported database type for database existence check")
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}' for database existence check")
+    except Exception as e:
+        logging.error(f"Error checking database existence: {e}")
+        return False
+```
+
+#### 6. `create_database(database_name)`
+Создает новую базу данных.
+
+```py
+def create_database(self, database_name):
+    try:
+        if self.db_type == 'mysql':
+            cursor = self.connection.cursor()
+            cursor.execute(f"CREATE DATABASE {database_name};")
+            logging.info(f"Database {database_name} created successfully.")
+        elif self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            cursor.execute(f"CREATE DATABASE {database_name};")
+            self.connection.commit()
+            logging.info(f"Database {database_name} created successfully.")
+            # необходимо переключиться на созданную базу данных
+            self.db_config['database'] = database_name
+            self.connection.close()
+            self.connection = self._connect()
+        else:
+            raise ValueError("Unsupported database type for database creation")
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}' for database creation")
+    except Exception as e:
+        logging.error(f"Error creating database {database_name}: {e}")
+```
+
+#### 7. `table_exists(table_name)`
+Проверяет, существует ли конкретная таблица в текущей базе данных.
+
+```py
+def table_exists(self, table_name):
+    try:
+        cursor = self.connection.cursor()
+        if self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_name = %s AND table_schema = 'public'
+                );
+            """, (table_name,))
+            result = cursor.fetchone()[0]
+        elif self.db_type == 'mysql':
+            cursor.execute("""
+                SELECT COUNT(*)
+                FROM information_schema.tables
+                WHERE table_name = %s AND table_schema = DATABASE();
+            """, (table_name,))
+            result = cursor.fetchone()[0] > 0
+        elif self.db_type == 'sqlite':
+            cursor.execute("""
+                SELECT name FROM sqlite_master
+                WHERE type='table' AND name=?;
+            """, (table_name,))
+            result = len(cursor.fetchall()) > 0
+        else:
+            raise ValueError("Unsupported database type for table existence check")
+        cursor.close()
+        return result
+    except ValueError:
+        logging.warning(f"Unsupported database type '{self.db_type}' for table existence check")
+    except Exception as e:
+        logging.error(f"Error checking table existence: {e}")
+        return False
+```
+
+#### 8. `create_table(table_name, columns_definition)`
+Создает новую таблицу с указанными определениями столбцов.
+
+```py
+def create_table(self, table_name, columns_definition):
+    try:
+        if self.db_type == 'mysql':
+            if not self.db_config.get('database'):
+                raise ValueError("Database name is not specified in the configuration.")
+            cursor = self.connection.cursor()
+            cursor.execute(f"USE {self.db_config.get('database')};")  # Select the database
+            cursor.close()
+        if self.db_type == 'postgresql':
+            cursor = self.connection.cursor()
+            query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
+            cursor.execute(query)
+            self.connection.commit()
+            logging.info(f"Table {table_name} created successfully.")
+        if self.db_type in ['sqlite', 'mysql']:
+            if self.db_type == 'sqlite':
+                query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns_definition)})"
+            else:
+                query = f"CREATE TABLE {table_name} ({', '.join(columns_definition)})"
+            cursor = self.connection.cursor()
+            cursor.execute(query)
+            self.connection.commit()
+            logging.info(f"Table {table_name} created successfully.")
+        elif self.db_type == 'redis':
+            logging.info(f"Table {table_name} created successfully.")
+    except Exception as e:
+        logging.error(f"Error creating table {table_name}: {e}")
+```
+
+
 ---
 
 ### Примеры использования `DatabaseManager`
@@ -483,4 +852,85 @@ db_manager.execute('update', 'user:1', 'Bob')
 
 # Удаление данных
 db_manager.execute('delete', 'user:1')
+```
+
+#### Пример `database_exists`
+
+```python
+from database_manager import DatabaseManager
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+# Check if a database exists
+if db_manager.database_exists('test_db'):
+    print("База данных 'test_db' существует.")
+else:
+    print("База данных 'test_db' не существует.")
+```
+
+#### Пример `create_database`
+
+```python
+from database_manager import DatabaseManager
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+db_manager.create_database('test_db')
+print("База данных 'test_db' была создана.")
+```
+
+#### Пример `table_exists`
+
+```python
+from database_manager import DatabaseManager
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+if db_manager.table_exists('users'):
+    print("Таблица 'users' существуют.")
+else:
+    print("Таблица 'users' не существует.")
+```
+
+#### Пример `create_table`
+
+```python
+from database_manager import DatabaseManager
+
+# Определить определения столбцов
+columns = [
+    "id SERIAL PRIMARY KEY",
+    "name VARCHAR(100) NOT NULL",
+    "age INT"
+]
+
+db_config = {
+    'user': 'root',
+    'password': 'password',
+    'host': 'localhost'
+}
+
+db_manager = DatabaseManager('mysql', db_config)
+
+# Создать новую таблицу
+db_manager.create_table('users', columns)
+print("Таблица 'users' были созданы.")
 ```
