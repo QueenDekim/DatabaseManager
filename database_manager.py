@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] - %(levelname)s - 
 
 # Database manager class
 class DatabaseManager:
-    def __init__(self, db_type, db_config):
+    def __init__(self, db_type: str, db_config: dict):
         self.db_type = db_type.lower()
         self.db_config = db_config
         try:
@@ -44,7 +44,7 @@ class DatabaseManager:
         except Exception as e:
             logging.error(f"Error connecting to the database: {e}")
 
-    def execute(self, method, table, columns='*', data=None, where=None):
+    def execute(self, method: str, table: str, columns='*', data: str=None, where: str=None):
         try:
             if self.db_type == 'redis':
                 return self._execute_redis(method, table, data)
@@ -117,7 +117,7 @@ class DatabaseManager:
             logging.error(f"Error executing database operation: {e}")
             return False
 
-    def _execute_redis(self, method, key, data=None):
+    def _execute_redis(self, method: str, key: str, data: str=None):
         try:
             if method.lower() == 'select':
                 return self.connection.get(key)
@@ -141,7 +141,7 @@ class DatabaseManager:
             logging.error(f"Error closing database connection: {e}")
 
     # Method to check if a database exists
-    def database_exists(self, database_name):
+    def database_exists(self, database_name: str):
         try:
             if self.db_type == 'mysql':
                 cursor = self.connection.cursor()
@@ -164,7 +164,7 @@ class DatabaseManager:
             return False
 
     # Method to create a database
-    def create_database(self, database_name):
+    def create_database(self, database_name: str):
         try:
             if self.db_type == 'mysql':
                 cursor = self.connection.cursor()
@@ -187,7 +187,7 @@ class DatabaseManager:
             logging.error(f"Error creating database {database_name}: {e}")
 
     # Method to check if a table exists
-    def table_exists(self, table_name):
+    def table_exists(self, table_name: str):
         try:
             cursor = self.connection.cursor()
             if self.db_type == 'postgresql':
@@ -224,7 +224,7 @@ class DatabaseManager:
             return False
 
     # Method to create a table dynamically
-    def create_table(self, table_name, columns_definition):
+    def create_table(self, table_name: str, columns_definition: list):
         try:
             if self.db_type == 'mysql':
                 if not self.db_config.get('database'):
