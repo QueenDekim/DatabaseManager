@@ -536,7 +536,7 @@ print("Table 'users' has been created.")
 
 ```python
 class DatabaseManager:
-    def __init__(self, db_type, db_config):
+    def __init__(self, db_type: str, db_config: dict):
         self.db_type = db_type.lower()
         self.db_config = db_config
         try:
@@ -587,7 +587,7 @@ def _connect(self):
 Метод выполняет SQL-запросы для операций CRUD.
 
 ```python
-def execute(self, method, table, columns='*', data=None, where=None):
+def execute(self, method: str, table: str, columns='*', data: str=None, where: str=None):
     try:
         if self.db_type == 'redis':
             return self._execute_redis(method, table, data)
@@ -639,7 +639,7 @@ def execute(self, method, table, columns='*', data=None, where=None):
 Метод для работы с Redis.
 
 ```python
-def _execute_redis(self, method, key, data=None):
+def _execute_redis(self, method: str, key: str, data: str=None):
     try:
         if method.lower() == 'select':
             return self.connection.get(key)
@@ -673,7 +673,7 @@ def close(self):
 Проверяет, существует ли конкретная база данных.
 
 ```py
-def database_exists(self, database_name):
+def database_exists(self, database_name: str):
     try:
         if self.db_type == 'mysql':
             cursor = self.connection.cursor()
@@ -700,7 +700,7 @@ def database_exists(self, database_name):
 Создает новую базу данных.
 
 ```py
-def create_database(self, database_name):
+def create_database(self, database_name: str):
     try:
         if self.db_type == 'mysql':
             cursor = self.connection.cursor()
@@ -727,7 +727,7 @@ def create_database(self, database_name):
 Проверяет, существует ли конкретная таблица в текущей базе данных.
 
 ```py
-def table_exists(self, table_name):
+def table_exists(self, table_name: str):
     try:
         cursor = self.connection.cursor()
         if self.db_type == 'postgresql':
@@ -768,7 +768,7 @@ def table_exists(self, table_name):
 Создает новую таблицу с указанными определениями столбцов.
 
 ```py
-def create_table(self, table_name, columns_definition):
+def create_table(self, table_name: str, columns_definition: list):
     try:
         if self.db_type == 'mysql':
             if not self.db_config.get('database'):
