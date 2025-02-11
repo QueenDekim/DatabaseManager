@@ -4,6 +4,11 @@
 - Supports methods for performing SQL request (`Select`, `Insert`, `Update`, `Delete`) and compound control.
 
 ---
+## Table of contents / Оглавление
+- [Usage Instructions [EN]](#usage-instructions-en)
+- [Usage Instructions [RU]](#инструкции-по-использованию-ru)
+- [Documentation [EN]](#documentation-en)
+- [Documentation [RU]](#документация-ru)
 
 # Usage Instructions [EN]
 
