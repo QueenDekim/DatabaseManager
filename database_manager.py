@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO, format='[%(asctime)s] - %(levelname)s - 
 class DatabaseManager:
     def __init__(self, db_type: str, db_config: dict):
         """
-        Initialization of the database manager.
+        Initialization of the database manager.\n
         :param db_type: Type of database (mysql, postgresql, sqlite, redis).
         :param db_config: Database Configuration.
         """
@@ -51,7 +51,7 @@ class DatabaseManager:
 
     def execute(self, method: str, table: str, columns='*', data=None, where: str = None):
         """
-        Performs SQL request.
+        Performs SQL request.\n
         :param method: Request method (select, insert, update, delete).
         :param table: Table name.
         :param columns: List of columns or string with columns.
@@ -98,7 +98,7 @@ class DatabaseManager:
 
     def _execute_redis(self, method: str, key: str, data=None):
         """
-        Performs an operation with Redis.
+        Performs an operation with Redis.\n
         :param method: Operation method (select, insert, update, delete).
         :param key: Key in Redis.
         :param data: Data for recording.
@@ -129,7 +129,7 @@ class DatabaseManager:
 
     def database_exists(self, database_name: str):
         """
-        Checks the existence of a database.
+        Checks the existence of a database.\n
         :param database_name: The name of the database.
         :return: True, if the database exists, otherwise False.
         """
@@ -156,7 +156,7 @@ class DatabaseManager:
 
     def create_database(self, database_name: str):
         """
-        Creates a new database.
+        Creates a new database.\n
         :param database_name: The name of the database.
         """
         try:
@@ -181,7 +181,7 @@ class DatabaseManager:
 
     def table_exists(self, table_name: str):
         """
-        Checks the existence of the table.
+        Checks the existence of the table.\n
         :param table_name: Table name.
         :return: True, if the table exists, otherwise False.
         """
@@ -221,7 +221,7 @@ class DatabaseManager:
 
     def create_table(self, table_name: str, columns_definition: list):
         """
-        Creates a new table.
+        Creates a new table.\n
         :param table_name: Table name.
         :param columns_definition: Determination of table columns.
         """
