@@ -49,7 +49,7 @@ class DatabaseManager:
         except Exception as e:
             logging.error(f"Database connection error: {e}")
 
-    def execute(self, method: str, table: str, columns='*', data=None, where: str = None):
+    def execute(self, method: str, table: str, columns='*', data: list=None, where: str = None):
         """
         Performs SQL request.\n
         :param method: Request method (select, insert, update, delete).
@@ -96,7 +96,7 @@ class DatabaseManager:
             logging.error(f"Error in performing a database operation: {e}")
             return False
 
-    def _execute_redis(self, method: str, key: str, data=None):
+    def _execute_redis(self, method: str, key: str, data: list=None):
         """
         Performs an operation with Redis.\n
         :param method: Operation method (select, insert, update, delete).

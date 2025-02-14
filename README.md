@@ -93,7 +93,7 @@ Establishes a connection to the database based on the specified type.
 
 ---
 
-#### 2. `execute(method, table, columns='*', data=None, where=None)`
+#### 2. `execute(method, table, columns='*', data: list=None, where=None)`
 Executes SQL queries for CRUD operations.
 
 ##### Parameters:
@@ -115,7 +115,7 @@ result = db_manager.execute('select', 'users', ['name', 'age'], where="age > 25"
 
 ---
 
-#### 3. `_execute_redis(method, key, data=None)`
+#### 3. `_execute_redis(method, key, data: list=None)`
 Handles operations with Redis.
 
 ##### Parameters:
@@ -311,7 +311,7 @@ def _connect(self):
 
 ---
 
-#### 2. `execute(method, table, columns='*', data=None, where=None)`
+#### 2. `execute(method, table, columns='*', data: list=None, where=None)`
 Выполняет SQL-запросы для операций CRUD.
 
 ##### Параметры:
@@ -333,7 +333,7 @@ result = db_manager.execute('select', 'users', ['name', 'age'], where="age > 25"
 
 ---
 
-#### 3. `_execute_redis(method, key, data=None)`
+#### 3. `_execute_redis(method, key, data: list=None)`
 Выполняет операции с Redis.
 
 ##### Параметры:
