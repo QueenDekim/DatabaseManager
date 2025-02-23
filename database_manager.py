@@ -38,7 +38,8 @@ class DatabaseManager:
                     user=self.db_config.get('user'),
                     password=self.db_config.get('password'),
                     host=self.db_config.get('host'),
-                    database=self.db_config.get('database')
+                    database=self.db_config.get('database'),
+                    port=int(self.db_config.get('port'))
                 )
             elif self.db_type == 'redis':
                 return redis.Redis(**self.db_config)
